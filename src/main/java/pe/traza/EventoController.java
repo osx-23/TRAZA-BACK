@@ -22,7 +22,11 @@ import jakarta.validation.constraints.NotNull;
 @RequestMapping("/api")
 public class EventoController {
     private final JdbcTemplate db;
-    public EventoController(JdbcTemplate db){this.db=db;}
+    private final StorageEvidenciasService storage;
+    public EventoController(JdbcTemplate db, StorageEvidenciasService storage) {
+        this.db=db;
+        this.storage=storage;
+    }
 
     public record EventoInput(
         @NotBlank String tipo, @NotBlank String plazaCodigo, @NotBlank String turno,
@@ -116,8 +120,15 @@ public class EventoController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasAuthority('ROLE_SUPERVISOR')")
     public void eliminar(@PathVariable UUID id) {
-        if(db.update("delete from public.traza_eventos where id=?",id)==0)
+        if(db.queryForObject("select count(*) from public.traza_eventos where id=?",Integer.class,id)==0)
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Evento no encontrado");
+        // Borrar objetos privados ANTES del ON DELETE CASCADE de traza_evidencias.
+        List<String> paths=db.queryForList("""
+            select storage_path from public.traza_evidencias
+            where evento_id=? and storage_path is not null
+            """,String.class,id);
+        for(String path:paths)storage.eliminar(path);
+        db.update("delete from public.traza_eventos where id=?",id);
     }
 
     @GetMapping("/estadisticas")
