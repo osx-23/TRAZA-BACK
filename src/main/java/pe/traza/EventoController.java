@@ -83,7 +83,17 @@ public class EventoController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Indique tamaño de cola");
         if(e.estado()!=null&&!List.of("REGISTRADO","ATENDIDO","EN_OBSERVACION").contains(e.estado()))
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Estado no válido");
-        if(e.via()!=null&&e.via().length()>60) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Vía demasiado larga");
+        if(e.via()!=null&&!e.via().isBlank()) {
+            if(e.via().length()>60)
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Vía demasiado larga");
+            Integer asignada=db.queryForObject("""
+                select count(*) from public.traza_plaza_vias
+                where plaza_codigo=? and numero=? and activo=true
+                """,Integer.class,e.plazaCodigo(),e.via().trim());
+            if(asignada==null || asignada==0)
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "La vía no está asignada a la plaza seleccionada");
+        }
         if(e.situacion()!=null&&e.situacion().length()>60) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Situación demasiado larga");
         if(e.ingreso()!=null&&e.ingreso().length()>60) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Ingreso demasiado largo");
         if(e.incidente()!=null&&e.incidente().length()>120) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Incidente demasiado largo");
