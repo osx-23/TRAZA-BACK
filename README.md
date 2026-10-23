@@ -38,3 +38,14 @@ Tipos: INCIDENCIA, MEDICION. Estados: REGISTRADO, EN_OBSERVACION, ATENDIDO. Cate
 - Al borrar una evidencia o un evento, el backend elimina sus objetos de Storage; ante un fallo externo puede requerirse revisar objetos huérfanos. La escritura primero sube a Storage y luego confirma los metadatos; si falla el INSERT, intenta limpiar el objeto.
 - Antes de registrar fotografías, definir `TRAZA_STORAGE_SERVICE_KEY` en el backend local o en Railway. Sin la clave, los endpoints de fotos devuelven HTTP 503 (no vuelven a escribir bytes en PostgreSQL).
 - Comprobación funcional: iniciar sesión, registrar incidencia, subir evidencia, consultar `/api/evidencias/{id}/archivo`, revisar el objeto privado en Storage y eliminarlo; comprobar la eliminación al borrar el evento. Revisar errores HTTP en los logs del backend sin exponer credenciales.
+
+
+## Vías por plaza
+- Catálogo configurable en `public.traza_plaza_vias` (clave compuesta `plaza_codigo, numero`), con RLS activa y sin acceso directo de `anon`/`authenticated`; el backend utiliza JDBC.
+- Datos iniciales: `P4` y `P5` con vías 101 a 105. El mismo número de vía puede asociarse a distintas plazas.
+- `GET /api/plazas/{plaza}/vias` devuelve las vías activas para usuarios autenticados.
+- `POST /api/plazas/{plaza}/vias` (solo `SUPERVISOR`) recibe `{"desde":101,"hasta":105}`. Permite un único número o hasta 100 por operación; reactiva las vías ya existentes.
+- `DELETE /api/plazas/{plaza}/vias/{numero}` (solo `SUPERVISOR`) desactiva la vía, no borra historial. Los registros existentes con una vía histórica pueden editarse sin cambiarla.
+- La API de eventos valida que una vía elegida esté activa en la plaza; `via=""` o `null` representa un registro a nivel de plaza.
+- En TRAZA-FRONT el selector se filtra al elegir plaza; la pantalla **Vías por plaza** solo está disponible para el supervisor.
+- `database/schema.sql` incluye la estructura y datos iniciales para crear una instalación nueva y coherente con Storage.
