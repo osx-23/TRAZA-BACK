@@ -72,7 +72,7 @@ public class EventoController {
         return found.get(0);
     }
 
-    private void validar(EventoInput e) {
+    private void validar(EventoInput e, UUID idExistente) {
         if(!List.of("INCIDENCIA","MEDICION").contains(e.tipo()))
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Tipo no válido");
         if(!List.of("A","B","C").contains(e.turno()))
@@ -90,9 +90,15 @@ public class EventoController {
                 select count(*) from public.traza_plaza_vias
                 where plaza_codigo=? and numero=? and activo=true
                 """,Integer.class,e.plazaCodigo(),e.via().trim());
-            if(asignada==null || asignada==0)
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "La vía no está asignada a la plaza seleccionada");
+            if(asignada==null || asignada==0) {
+                Integer historica=idExistente==null ? 0 : db.queryForObject("""
+                    select count(*) from public.traza_eventos
+                    where id=? and plaza_codigo=? and via=?
+                    """,Integer.class,idExistente,e.plazaCodigo(),e.via().trim());
+                if(historica==null || historica==0)
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "La vía no está asignada a la plaza seleccionada");
+            }
         }
         if(e.situacion()!=null&&e.situacion().length()>60) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Situación demasiado larga");
         if(e.ingreso()!=null&&e.ingreso().length()>60) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Ingreso demasiado largo");
@@ -104,7 +110,7 @@ public class EventoController {
     @PostMapping("/eventos")
     @ResponseStatus(HttpStatus.CREATED)
     public Map<String,Object> crear(@Valid @RequestBody EventoInput e, JwtAuthenticationToken user) {
-        validar(e);
+        validar(e,null);
         UUID id=UUID.randomUUID();
         db.update("""
             insert into public.traza_eventos(id,tipo,plaza_codigo,turno,via,fecha,hora,situacion,ingreso,incidente,
@@ -116,7 +122,7 @@ public class EventoController {
     }
     @PutMapping("/eventos/{id}")
     public Map<String,Object> actualizar(@PathVariable UUID id,@Valid @RequestBody EventoInput e) {
-        validar(e);
+        validar(e,id);
         int rows=db.update("""
             update public.traza_eventos set tipo=?,plaza_codigo=?,turno=?,via=?,fecha=?,hora=?,
             situacion=?,ingreso=?,incidente=?,descripcion=?,cola_metros=?,estado=?,actualizado_en=now()
