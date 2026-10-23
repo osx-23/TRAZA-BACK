@@ -31,7 +31,7 @@ Tipos: INCIDENCIA, MEDICION. Estados: REGISTRADO, EN_OBSERVACION, ATENDIDO. Cate
 
 ## Supabase Storage (evidencias)
 - Proyecto Supabase: `mmoefoeywkydbnivirhu`. Bucket PRIVADO: `traza-evidencias`, creado con límite de 4 MB y formatos JPEG, PNG y WebP.
-- Variables SOLO del backend: `TRAZA_STORAGE_URL=https://mmoefoeywkydbnivirhu.supabase.co` y `TRAZA_STORAGE_SERVICE_KEY` (clave `service_role` del proyecto TRAZA; obtenerla en Supabase > Project Settings > API Keys). No subir esta clave a Git ni incluirla en Vercel o Angular.
+- Variables SOLO del backend: `TRAZA_STORAGE_URL=https://mmoefoeywkydbnivirhu.supabase.co` y `TRAZA_STORAGE_SERVICE_KEY` (clave secreta `sb_secret_...` del proyecto TRAZA (o `service_role` legacy); obtenerla en Supabase > Project Settings > API Keys). No subir esta clave a Git ni incluirla en Vercel o Angular.
 - La configuración Spring Boot está en `src/main/resources/application.properties` (no en YAML).
 - Esquema: `public.traza_evidencias.storage_path` contiene `eventos/{eventoId}/{evidenciaId}.jpg|png|webp`; `contenido BYTEA` se conserva solo como compatibilidad con evidencias anteriores.
 - El frontend **no** accede a Storage ni tiene claves de servicio; mantiene los endpoints existentes de carga, consulta y eliminación. El backend descarga imágenes privadas únicamente para usuarios que ya tienen acceso autorizado a la API.
